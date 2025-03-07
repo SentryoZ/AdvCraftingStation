@@ -1,6 +1,7 @@
 package me.sentryoz.advCraftingStation.gui;
 
 import mc.obliviate.inventory.Gui;
+import mc.obliviate.inventory.Icon;
 import mc.obliviate.inventory.pagination.PaginationManager;
 import me.sentryoz.advCraftingStation.action.ContainerAction;
 import net.kyori.adventure.text.Component;
@@ -9,6 +10,7 @@ import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.Nullable;
@@ -77,10 +79,8 @@ public class CraftingGUI extends Gui {
 
         contents.getKeys(false).forEach(key -> {
             String configKey = "contents." + key;
-
             buildItemSlot(configKey);
-            String slotsString = config.getString(configKey . ".slots");
-            ArrayList<Integer> slots = calculateSlots(slotsString);
+
         });
 
 
@@ -92,21 +92,32 @@ public class CraftingGUI extends Gui {
         ContainerAction action = ContainerAction.fromString(
                 config.getString(key + ".action")
         );
+
+        String slotsString = config.getString(key + ".slots");
+        ArrayList<Integer> slots = calculateSlots(slotsString);
+
         ItemStack item = null;
+        Icon icon;
         switch (action) {
             case PREVIEW_RESULT -> {
-                item = new ItemStack(Material.AIR);
+                item = new ItemStack(Material.PAPER);
             }
             case PREVIEW_ITEM -> {
-                item = new ItemStack(Material.AIR);
+                item = new ItemStack(Material.PAPER);
             }
-            case NEXT, PREV, NONE, INGREDIENT, CLOSE, CRAFT -> {
+            case CLOSE ->{
+                item = buildItem(key);
+                icon = new Icon(item);
+                icon.onClick(event -> {
+                    player.closeInventory(InventoryCloseEvent.Reason.PLUGIN);
+                });
+            }
+            case NEXT, PREV, NONE, INGREDIENT, CRAFT -> {
                 item = buildItem(key);
             }
         }
-
-        if (action == ContainerAction.PREVIEW_RESULT) {
-            ItemStack resultItem = config.getItemStack(key + ".result");
+        for (int slot : slots) {
+            this.addItem(slot, item);
         }
     }
 
