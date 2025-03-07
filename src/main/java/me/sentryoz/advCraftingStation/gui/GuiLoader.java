@@ -1,11 +1,7 @@
 package me.sentryoz.advCraftingStation.gui;
 
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.TextDecoration;
-import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.inventory.Inventory;
 
 import java.io.File;
 import java.util.HashMap;
@@ -14,9 +10,9 @@ import java.util.Map;
 import static me.sentryoz.advCraftingStation.AdvCraftingStation.plugin;
 
 public class GuiLoader {
-    private Map<String, FileConfiguration> stationConfigs = new HashMap<>();
+    protected Map<String, FileConfiguration> stationConfigs = new HashMap<>();
 
-    public void loadStationConfigs() {
+    public Map<String, FileConfiguration> loadStationConfigs() {
         File stationsDir = new File(plugin.getDataFolder(), "stations");
 
         if (!stationsDir.exists()) {
@@ -32,8 +28,6 @@ public class GuiLoader {
 
                 FileConfiguration config = YamlConfiguration.loadConfiguration(configFile);
 
-                Inventory inventory = loadInventory(config);
-
                 stationConfigs.put(stationName, config);
 
                 plugin.getLogger().info("Loaded station config: " + stationName);
@@ -41,16 +35,7 @@ public class GuiLoader {
         } else {
             plugin.getLogger().warning("No station configuration files found.");
         }
-    }
 
-    public Inventory loadInventory(FileConfiguration config) {
-        String title = config.getString("title", "Crafting Station");
-        Integer size = config.getInt("rows", 1) * 9;
-        Component textComponent = Component.text(title);
-        Inventory inventory = Bukkit.createInventory(null, size, textComponent);
-
-        // build item stack
-
-        return inventory;
+        return stationConfigs;
     }
 }
