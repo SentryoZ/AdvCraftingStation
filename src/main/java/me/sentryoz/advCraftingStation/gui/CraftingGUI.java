@@ -80,7 +80,7 @@ public class CraftingGUI extends Gui {
 
             buildItemSlot(configKey);
             String slotsString = config.getString(configKey . ".slots");
-            slots = calculateSlots(slotsString);
+            ArrayList<Integer> slots = calculateSlots(slotsString);
         });
 
 
