@@ -12,7 +12,7 @@ permission: station.canOpen.default
 # Recipe list
 recipes:
   1:
-    # Type of result, can be VANILLA or MMOItems type
+    # Type of result
     type: SWORD
     # ID of item
     id: LONG_SWORD

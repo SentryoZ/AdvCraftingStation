@@ -1,1 +1,5 @@
-key: value
+# Allow list for ingredients
+ingredient_type:
+  - INGREDIENTS
+
+# Allow list for stats
