@@ -32,16 +32,11 @@ public class CraftingGUI extends Gui {
 
     protected String station;
 
-    protected HashMap<Integer, String> resultItems;
-    protected HashMap<Integer, String> recipeItems;
-
     protected String selectedRecipeKey = null;
 
     protected List<Integer> ingredientSlots = new ArrayList<>();
     protected List<Integer> resultSlots = new ArrayList<>();
-    protected Multimap<Attribute, AttributeModifier> bonusVanillaStats =  ArrayListMultimap.create();
     protected HashMap<String, Integer> bonusMMOStats;
-    protected HashMap<String, Integer> bonusMythicStats;
 
     private final FileConfiguration config;
     private final PaginationManager paginationManager = new PaginationManager(this);
@@ -369,9 +364,8 @@ public class CraftingGUI extends Gui {
     }
 
     private void updateBonusStats() {
-        bonusVanillaStats = ArrayListMultimap.create();
         for (int ingredientSlot : ingredientSlots) {
-            updateVanillaStats(ingredientSlot);
+
         }
 
         // update preview item
@@ -383,8 +377,6 @@ public class CraftingGUI extends Gui {
                 return;
             }
             ItemMeta meta = resultItem.getItemMeta();
-            meta.setAttributeModifiers(bonusVanillaStats);
-
             resultItem.setItemMeta(meta);
 
             for (Integer slot : resultSlots) {
@@ -394,23 +386,5 @@ public class CraftingGUI extends Gui {
 
         }
 
-    }
-
-    private void updateVanillaStats(int ingredientSlot) {
-        Inventory inventory = getInventory();
-        ItemStack ingredientItem = inventory.getItem(ingredientSlot);
-        if (ingredientItem != null) {
-            @Nullable Multimap<Attribute, AttributeModifier> attributeModifiers = ingredientItem.getItemMeta().getAttributeModifiers();
-
-            if (attributeModifiers != null) {
-                for (Map.Entry<Attribute, AttributeModifier> entry : attributeModifiers.entries()) {
-                    Attribute key = entry.getKey();
-                    AttributeModifier value = entry.getValue();
-                    plugin.getLogger().info("Key: " + key.getKey());
-                    plugin.getLogger().info("Value: " + value.getKey());
-                    bonusVanillaStats.put(key, value);
-                }
-            }
-        }
     }
 }
