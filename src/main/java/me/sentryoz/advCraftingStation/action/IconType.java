@@ -1,6 +1,6 @@
 package me.sentryoz.advCraftingStation.action;
 
-public enum ContainerAction {
+public enum IconType {
     NONE,
     PREV,
     NEXT,
@@ -10,10 +10,10 @@ public enum ContainerAction {
     PREVIEW_ITEM,
     PREVIEW_RESULT;
 
-    public static ContainerAction fromString(String actionString) {
+    public static IconType fromString(String actionString) {
         if (actionString != null) {
             try {
-                return ContainerAction.valueOf(actionString.toUpperCase());
+                return IconType.valueOf(actionString.toUpperCase());
             } catch (IllegalArgumentException e) {
                 return NONE;
             }

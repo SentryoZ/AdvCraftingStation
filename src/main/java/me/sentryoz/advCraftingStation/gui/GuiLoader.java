@@ -12,11 +12,13 @@ import static me.sentryoz.advCraftingStation.AdvCraftingStation.plugin;
 public class GuiLoader {
     protected Map<String, FileConfiguration> stationConfigs = new HashMap<>();
 
-    public Map<String, FileConfiguration> loadStationConfigs() {
+    public void loadStationConfigs() {
+        stationConfigs = new HashMap<>();
         File stationsDir = new File(plugin.getDataFolder(), "stations");
 
         if (!stationsDir.exists()) {
-            plugin.getLogger().warning("No stations found.");
+            plugin.saveResource("stations/default.yml", false);
+            plugin.getLogger().warning("No stations found, created one.");
         }
 
         File[] configFiles = stationsDir.listFiles((dir, name) -> name.endsWith(".yml"));
@@ -35,7 +37,9 @@ public class GuiLoader {
         } else {
             plugin.getLogger().warning("No station configuration files found.");
         }
+    }
 
+    public Map<String, FileConfiguration> getStationConfigs() {
         return stationConfigs;
     }
 }

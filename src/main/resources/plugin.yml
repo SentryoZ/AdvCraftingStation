@@ -2,3 +2,12 @@ name: AdvCraftingStation
 version: '1.0-SNAPSHOT'
 main: me.sentryoz.advCraftingStation.AdvCraftingStation
 api-version: '1.21'
+commands:
+  open-station:
+    description: Open station
+    usage: /<command>
+    permission: advstation.open
+  reload-station:
+    description: Reload station
+    usage: /<command>
+    permission: advstation.reload

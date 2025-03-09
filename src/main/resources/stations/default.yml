@@ -28,7 +28,7 @@ recipes:
 contents:
   decorates:
     # Material (Default = STONE)
-    material: STONE
+    material: WHITE_STAINED_GLASS_PANE
     # Amount will show (Default = 1, range 1-64)
     amount: 1
     # Name of item (Optional, default = vanilla item name)
