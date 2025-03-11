@@ -25,6 +25,9 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import static me.sentryoz.advCraftingStation.AdvCraftingStation.plugin;
 import static org.bukkit.inventory.ItemFlag.*;
@@ -42,7 +45,9 @@ public class CraftingGUI extends Gui {
     private final FileConfiguration config;
     private final PaginationManager paginationManager = new PaginationManager(this);
     private final AdvancedSlotManager advancedSlotManager = new AdvancedSlotManager(this);
+    private String errorMessage = null;
     MMOItems mmoItems = MMOItems.plugin;
+    private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     public CraftingGUI(Player player, String stationName) {
         super(player, "craftingStation", "Blank Station", 6);
@@ -74,6 +79,9 @@ public class CraftingGUI extends Gui {
     @Override
     public void onOpen(InventoryOpenEvent event) {
         super.onOpen(event);
+        scheduler.scheduleAtFixedRate(() -> {
+            errorMessage = null;
+        }, 3,3, TimeUnit.SECONDS);
 
         // Build contents
         @Nullable ConfigurationSection contents = config.getConfigurationSection("contents");
@@ -124,12 +132,13 @@ public class CraftingGUI extends Gui {
         String type = config.getString(key + ".type");
         String id = config.getString(key + ".id");
 
-        ItemStack item = getMMOItems(type, id).newBuilder().build();
-        if (item == null) {
+        MMOItem mmoItem = getMMOItems(type, id);
+        if (mmoItem == null) {
             plugin.getLogger().warning("Could not find item " + type + " with id " + id);
+            return null;
         }
 
-        return item;
+        return mmoItem.newBuilder().build();
     }
 
     public void prepare() {
@@ -230,7 +239,6 @@ public class CraftingGUI extends Gui {
             ingredientSlots.add(slot);
             advancedSlot.onPrePutClick((inventoryClickEvent, eventItem) -> !checkIngredient(eventItem));
             advancedSlot.onPut((inventoryClickEvent, eventItem) -> {
-                // check mark
                 updateBonusStats();
             });
         }
@@ -406,11 +414,24 @@ public class CraftingGUI extends Gui {
         NBTItem nbtItem = NBTItem.get(ingredient);
         String type = nbtItem.getType();
 
+        List<String> allowedTypes = plugin.getConfig().getStringList("allowed_types");
+
         if (type == null) {
             return false;
         }
-        List<String> allowedTypes = plugin.getConfig().getStringList("allowed_types");
 
-        return allowedTypes.contains(type);
+        if (allowedTypes.contains(type)) {
+            return true;
+        }
+        String message = "Allowed ingredient types: " + String.join(", ", allowedTypes).toLowerCase();
+        sendErrorMessage(message);
+        return false;
+    }
+
+    private void sendErrorMessage(String message){
+        if (errorMessage == null || !errorMessage.equals(message)) {
+            player.sendMessage(message);
+            errorMessage = message;
+        }
     }
 }
