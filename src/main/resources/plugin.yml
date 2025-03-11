@@ -2,6 +2,8 @@ name: AdvCraftingStation
 version: '1.0-SNAPSHOT'
 main: me.sentryoz.advCraftingStation.AdvCraftingStation
 api-version: '1.21'
+depend:
+  - MMOItems
 commands:
   open-station:
     description: Open station

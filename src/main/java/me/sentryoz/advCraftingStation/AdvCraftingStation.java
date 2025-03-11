@@ -5,7 +5,6 @@ import me.sentryoz.advCraftingStation.commands.OpenStationCommand;
 import me.sentryoz.advCraftingStation.commands.ReloadStationCommand;
 import me.sentryoz.advCraftingStation.gui.GuiLoader;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.HashMap;
@@ -15,8 +14,6 @@ import java.util.Objects;
 public final class AdvCraftingStation extends JavaPlugin {
 
     public static AdvCraftingStation plugin;
-    public boolean mmoItemsEnabled = false;
-    public boolean mythicMobEnabled = false;
     public Map<String, FileConfiguration> stationConfigs = new HashMap<>();
 
     @Override
@@ -24,8 +21,7 @@ public final class AdvCraftingStation extends JavaPlugin {
         // Plugin startup logic
         plugin = this;
         saveDefaultConfig();
-        mmoItemsEnabled = checkSoftDependenciesPlugin("MMOItems");
-        mythicMobEnabled = checkSoftDependenciesPlugin("MythicMobs");
+
         new InventoryAPI(this).init();
 
         // Load stations
@@ -40,18 +36,5 @@ public final class AdvCraftingStation extends JavaPlugin {
     @Override
     public void onDisable() {
         // Plugin shutdown logic
-    }
-
-
-    private boolean checkSoftDependenciesPlugin(String name) {
-        // Check if server have MMOItems
-        Plugin plugin = getServer().getPluginManager().getPlugin(name);
-        if (plugin != null) {
-            this.getLogger().info(name + " plugin found.");
-            return true;
-        } else {
-            this.getLogger().info(name + " plugin not found.");
-            return false;
-        }
     }
 }

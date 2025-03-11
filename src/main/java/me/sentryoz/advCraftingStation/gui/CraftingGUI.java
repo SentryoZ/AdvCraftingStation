@@ -1,18 +1,19 @@
 package me.sentryoz.advCraftingStation.gui;
 
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Multimap;
+import io.lumine.mythic.lib.api.item.NBTItem;
 import mc.obliviate.inventory.Gui;
 import mc.obliviate.inventory.Icon;
 import mc.obliviate.inventory.advancedslot.AdvancedSlot;
 import mc.obliviate.inventory.advancedslot.AdvancedSlotManager;
 import mc.obliviate.inventory.pagination.PaginationManager;
 import me.sentryoz.advCraftingStation.action.IconType;
+import net.Indyuce.mmoitems.ItemStats;
+import net.Indyuce.mmoitems.MMOItems;
+import net.Indyuce.mmoitems.api.item.mmoitem.MMOItem;
+import net.Indyuce.mmoitems.stat.type.ItemStat;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import org.bukkit.Material;
-import org.bukkit.attribute.Attribute;
-import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
@@ -36,16 +37,18 @@ public class CraftingGUI extends Gui {
 
     protected List<Integer> ingredientSlots = new ArrayList<>();
     protected List<Integer> resultSlots = new ArrayList<>();
-    protected HashMap<String, Integer> bonusMMOStats;
+    protected HashMap<String, Double> bonusMMOStats = new HashMap<>();
 
     private final FileConfiguration config;
     private final PaginationManager paginationManager = new PaginationManager(this);
     private final AdvancedSlotManager advancedSlotManager = new AdvancedSlotManager(this);
+    MMOItems mmoItems = MMOItems.plugin;
 
     public CraftingGUI(Player player, String stationName) {
         super(player, "craftingStation", "Blank Station", 6);
         station = stationName;
         config = getConfig();
+
     }
 
     public String getStation() {
@@ -111,25 +114,19 @@ public class CraftingGUI extends Gui {
 
     }
 
+    private MMOItem getMMOItems(String type, String id) {
+        type = type.toUpperCase();
+        id = id.toUpperCase();
+        return mmoItems.getMMOItem(MMOItems.plugin.getTypes().get(type), id);
+    }
+
     private @Nullable ItemStack buildRecipeItem(String key) {
         String type = config.getString(key + ".type");
         String id = config.getString(key + ".id");
 
-        ItemStack item = null;
-
-        if (type == null || type.equalsIgnoreCase("VANILLA")) {
-            Material material;
-            try {
-                material = Material.valueOf(id);
-            } catch (IllegalArgumentException e) {
-                plugin.getLogger().info("Recipe " + key + " in station" + station + " have empty unknown item id");
-                return null;
-            }
-            item = new ItemStack(material);
-        } else if (Objects.equals(type, "MYTHIC_MOBS")) {
-            // TODO: Check mythic mob items
-        } else {
-            // TODO: Check mmo items
+        ItemStack item = getMMOItems(type, id).newBuilder().build();
+        if (item == null) {
+            plugin.getLogger().warning("Could not find item " + type + " with id " + id);
         }
 
         return item;
@@ -231,13 +228,9 @@ public class CraftingGUI extends Gui {
         AdvancedSlot advancedSlot = advancedSlotManager.addAdvancedIcon(slot, new Icon(itemStack));
         if (type == IconType.INGREDIENT) {
             ingredientSlots.add(slot);
+            advancedSlot.onPrePutClick((inventoryClickEvent, eventItem) -> !checkIngredient(eventItem));
             advancedSlot.onPut((inventoryClickEvent, eventItem) -> {
-                if (plugin.mmoItemsEnabled) {
-                    // TODO: Check allowed ingredient
-                }
-                if (plugin.mythicMobEnabled) {
-                    // TODO: Check allowed ingredient
-                }
+                // check mark
                 updateBonusStats();
             });
         }
@@ -364,20 +357,39 @@ public class CraftingGUI extends Gui {
     }
 
     private void updateBonusStats() {
-        for (int ingredientSlot : ingredientSlots) {
+        List<String> allowedStats = plugin.getConfig().getStringList("allowed_stats");
 
+        for (int ingredientSlot : ingredientSlots) {
+            Inventory inventory = getInventory();
+            ItemStack ingredientItem = inventory.getItem(ingredientSlot);
+            NBTItem nbtItem = NBTItem.get(ingredientItem);
+
+            nbtItem.getStat("");
+            for (String stat : allowedStats) {
+                stat = stat.trim();
+                double amount = nbtItem.getStat(stat);
+
+                if (bonusMMOStats.containsKey(stat)) {
+                    amount += bonusMMOStats.get(stat);
+                }
+                bonusMMOStats.put(stat, amount);
+            }
         }
 
         // update preview item
         if (selectedRecipeKey != null) {
             String key = "recipes." + selectedRecipeKey;
-            ItemStack resultItem = buildRecipeItem(key);
+            String type = config.getString(key + ".type");
+            String id = config.getString(key + ".id");
+            MMOItem mmoitem = getMMOItems(type, id);
 
+            ItemStat itemStats = ItemStats.ITEM_COOLDOWN;
+
+            ItemStack resultItem = mmoitem.newBuilder().build();
             if (resultItem == null) {
                 return;
             }
-            ItemMeta meta = resultItem.getItemMeta();
-            resultItem.setItemMeta(meta);
+            NBTItem nbtItem = NBTItem.get(resultItem);
 
             for (Integer slot : resultSlots) {
                 Inventory inventory = getInventory();
@@ -385,6 +397,20 @@ public class CraftingGUI extends Gui {
             }
 
         }
+    }
 
+    private boolean checkIngredient(ItemStack ingredient) {
+        if (ingredient == null) {
+            return false;
+        }
+        NBTItem nbtItem = NBTItem.get(ingredient);
+        String type = nbtItem.getType();
+
+        if (type == null) {
+            return false;
+        }
+        List<String> allowedTypes = plugin.getConfig().getStringList("allowed_types");
+
+        return allowedTypes.contains(type);
     }
 }

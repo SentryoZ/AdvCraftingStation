@@ -1,5 +1,11 @@
 # Allow list for ingredients
-ingredient_type:
+allowed_types:
   - INGREDIENTS
+
+
+# Allow list for stats
+allowed_stats:
+  - MAX_HEALTH
+  - ATTACK
 
 # Allow list for stats
