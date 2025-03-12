@@ -7,10 +7,12 @@ import mc.obliviate.inventory.advancedslot.AdvancedSlot;
 import mc.obliviate.inventory.advancedslot.AdvancedSlotManager;
 import mc.obliviate.inventory.pagination.PaginationManager;
 import me.sentryoz.advCraftingStation.action.IconType;
-import net.Indyuce.mmoitems.ItemStats;
 import net.Indyuce.mmoitems.MMOItems;
+import net.Indyuce.mmoitems.api.Type;
+import net.Indyuce.mmoitems.api.crafting.ConfigMMOItem;
 import net.Indyuce.mmoitems.api.item.mmoitem.MMOItem;
-import net.Indyuce.mmoitems.stat.type.ItemStat;
+import net.Indyuce.mmoitems.api.item.template.MMOItemTemplate;
+import net.Indyuce.mmoitems.stat.data.type.StatData;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import org.bukkit.Material;
@@ -81,7 +83,7 @@ public class CraftingGUI extends Gui {
         super.onOpen(event);
         scheduler.scheduleAtFixedRate(() -> {
             errorMessage = null;
-        }, 3,3, TimeUnit.SECONDS);
+        }, 3, 3, TimeUnit.SECONDS);
 
         // Build contents
         @Nullable ConfigurationSection contents = config.getConfigurationSection("contents");
@@ -126,6 +128,20 @@ public class CraftingGUI extends Gui {
         type = type.toUpperCase();
         id = id.toUpperCase();
         return mmoItems.getMMOItem(MMOItems.plugin.getTypes().get(type), id);
+    }
+
+    private MMOItem getMMOItems(ItemStack item) {
+
+        NBTItem nbtItem = NBTItem.get(item);
+
+        String type = nbtItem.getType();
+        String id = nbtItem.getString("MMOITEMS_ITEM_ID");
+
+        if (type == null || id == null) {
+            return null;
+        }
+
+        return getMMOItems(type, id);
     }
 
     private @Nullable ItemStack buildRecipeItem(String key) {
@@ -365,45 +381,55 @@ public class CraftingGUI extends Gui {
     }
 
     private void updateBonusStats() {
+        if (selectedRecipeKey == null) {
+            return;
+        }
         List<String> allowedStats = plugin.getConfig().getStringList("allowed_stats");
 
+        String key = "recipes." + selectedRecipeKey;
+        String type = config.getString(key + ".type");
+        String id = config.getString(key + ".id");
+
+        MMOItem mmoItem = getMMOItems(type, id);
+        Type mmoItemType = mmoItem.getType();
+        Inventory inventory = getInventory();
+
+        List<MMOItem> appliedItems = new ArrayList<>();
         for (int ingredientSlot : ingredientSlots) {
-            Inventory inventory = getInventory();
             ItemStack ingredientItem = inventory.getItem(ingredientSlot);
-            NBTItem nbtItem = NBTItem.get(ingredientItem);
-
-            nbtItem.getStat("");
-            for (String stat : allowedStats) {
-                stat = stat.trim();
-                double amount = nbtItem.getStat(stat);
-
-                if (bonusMMOStats.containsKey(stat)) {
-                    amount += bonusMMOStats.get(stat);
-                }
-                bonusMMOStats.put(stat, amount);
+            if (ingredientItem == null) {
+                continue;
             }
+            MMOItem mmoIngredientItem = getMMOItems(ingredientItem);
+            if (mmoIngredientItem == null) {
+                continue;
+            }
+            boolean allowedDuplicate = plugin.getConfig().getBoolean("allowed_duplicates", false);
+            if (!allowedDuplicate && appliedItems.contains(mmoIngredientItem)) {
+                continue;
+            }
+            mmoIngredientItem.getStats().forEach(itemStat -> {
+                if (!allowedStats.contains(itemStat.getId())) {
+                    return;
+                }
+                if (!itemStat.isCompatible(mmoItemType)) {
+                    return;
+                }
+
+                StatData statData = mmoIngredientItem.getData(itemStat);
+                plugin.getLogger().info(itemStat.getId() + ": " + statData.toString());
+                if (mmoItem.hasData(itemStat)) {
+                    mmoItem.mergeData(itemStat, statData, null);
+                } else {
+                    mmoItem.setData(itemStat, statData);
+                }
+            });
+            appliedItems.add(mmoIngredientItem);
         }
 
-        // update preview item
-        if (selectedRecipeKey != null) {
-            String key = "recipes." + selectedRecipeKey;
-            String type = config.getString(key + ".type");
-            String id = config.getString(key + ".id");
-            MMOItem mmoitem = getMMOItems(type, id);
-
-            ItemStat itemStats = ItemStats.ITEM_COOLDOWN;
-
-            ItemStack resultItem = mmoitem.newBuilder().build();
-            if (resultItem == null) {
-                return;
-            }
-            NBTItem nbtItem = NBTItem.get(resultItem);
-
-            for (Integer slot : resultSlots) {
-                Inventory inventory = getInventory();
-                inventory.setItem(slot, resultItem);
-            }
-
+        ItemStack resultItem = mmoItem.newBuilder().build();
+        for (Integer slot : resultSlots) {
+            inventory.setItem(slot, resultItem);
         }
     }
 
@@ -428,7 +454,7 @@ public class CraftingGUI extends Gui {
         return false;
     }
 
-    private void sendErrorMessage(String message){
+    private void sendErrorMessage(String message) {
         if (errorMessage == null || !errorMessage.equals(message)) {
             player.sendMessage(message);
             errorMessage = message;
