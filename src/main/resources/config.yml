@@ -8,5 +8,5 @@ allowed_stats:
   - MAX_HEALTH
   - ATTACK_DAMAGE
 
-# Allow list for stats
+# Allow duplicated ingredient
 allowed_duplicates: false

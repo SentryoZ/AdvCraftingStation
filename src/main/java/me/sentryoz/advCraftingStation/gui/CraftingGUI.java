@@ -7,11 +7,10 @@ import mc.obliviate.inventory.advancedslot.AdvancedSlot;
 import mc.obliviate.inventory.advancedslot.AdvancedSlotManager;
 import mc.obliviate.inventory.pagination.PaginationManager;
 import me.sentryoz.advCraftingStation.action.IconType;
+import me.sentryoz.advCraftingStation.util.InventoryUtil;
 import net.Indyuce.mmoitems.MMOItems;
 import net.Indyuce.mmoitems.api.Type;
-import net.Indyuce.mmoitems.api.crafting.ConfigMMOItem;
 import net.Indyuce.mmoitems.api.item.mmoitem.MMOItem;
-import net.Indyuce.mmoitems.api.item.template.MMOItemTemplate;
 import net.Indyuce.mmoitems.stat.data.type.StatData;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
@@ -26,7 +25,9 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -193,16 +194,6 @@ public class CraftingGUI extends Gui {
 
         Icon icon = new Icon(item);
         switch (type) {
-            case PREVIEW_RESULT -> {
-                icon.onClick(event -> {
-                    player.sendMessage("Clicked preview result");
-                });
-            }
-            case PREVIEW_ITEM -> {
-                icon.onClick(event -> {
-                    player.sendMessage("Clicked preview item");
-                });
-            }
             case CLOSE -> {
                 icon.onClick(event -> {
                     player.closeInventory(InventoryCloseEvent.Reason.PLUGIN);
@@ -222,17 +213,7 @@ public class CraftingGUI extends Gui {
             }
             case CRAFT -> {
                 icon.onClick(event -> {
-                    player.sendMessage("Clicked craft");
-                });
-            }
-            case INGREDIENT -> {
-                icon.onClick(event -> {
-                    player.sendMessage("Clicked ingredient");
-                });
-            }
-            case NONE -> {
-                icon.onClick(event -> {
-                    player.sendMessage("Clicked none");
+                    craftItem();
                 });
             }
         }
@@ -380,10 +361,7 @@ public class CraftingGUI extends Gui {
         );
     }
 
-    private void updateBonusStats() {
-        if (selectedRecipeKey == null) {
-            return;
-        }
+    private MMOItem createMMOItem() {
         List<String> allowedStats = plugin.getConfig().getStringList("allowed_stats");
 
         String key = "recipes." + selectedRecipeKey;
@@ -394,7 +372,7 @@ public class CraftingGUI extends Gui {
         Type mmoItemType = mmoItem.getType();
         Inventory inventory = getInventory();
 
-        List<MMOItem> appliedItems = new ArrayList<>();
+        List<String> appliedItems = new ArrayList<>();
         for (int ingredientSlot : ingredientSlots) {
             ItemStack ingredientItem = inventory.getItem(ingredientSlot);
             if (ingredientItem == null) {
@@ -404,8 +382,13 @@ public class CraftingGUI extends Gui {
             if (mmoIngredientItem == null) {
                 continue;
             }
+            String ingredientItemType = mmoIngredientItem.getType().getId();
+            String ingredientItemId = mmoIngredientItem.getId();
+
+            String arrayKey = String.join("_", ingredientItemType, ingredientItemId);
+
             boolean allowedDuplicate = plugin.getConfig().getBoolean("allowed_duplicates", false);
-            if (!allowedDuplicate && appliedItems.contains(mmoIngredientItem)) {
+            if (appliedItems.contains(arrayKey) && !allowedDuplicate) {
                 continue;
             }
             mmoIngredientItem.getStats().forEach(itemStat -> {
@@ -424,10 +407,19 @@ public class CraftingGUI extends Gui {
                     mmoItem.setData(itemStat, statData);
                 }
             });
-            appliedItems.add(mmoIngredientItem);
+            appliedItems.add(arrayKey);
         }
 
-        ItemStack resultItem = mmoItem.newBuilder().build();
+        return mmoItem;
+    }
+
+    private void updateBonusStats() {
+        if (selectedRecipeKey == null) {
+            return;
+        }
+
+        Inventory inventory = getInventory();
+        ItemStack resultItem = createMMOItem().newBuilder().build();
         for (Integer slot : resultSlots) {
             inventory.setItem(slot, resultItem);
         }
@@ -459,5 +451,101 @@ public class CraftingGUI extends Gui {
             player.sendMessage(message);
             errorMessage = message;
         }
+    }
+
+    private void craftItem() {
+        if (selectedRecipeKey == null) {
+            return;
+        }
+        String key = "recipes." + selectedRecipeKey;
+
+        boolean canCraft = true;
+        List<String> materials = config.getStringList(key + ".materials");
+        for (String material : materials) {
+            plugin.getLogger().info(material);
+            String[] materialData = material.split(",");
+            if (materialData.length < 2) {
+                return;
+            }
+            String type = materialData[0];
+            String id = materialData[1];
+            int amount = 1;
+            if (materialData.length == 3) {
+                try {
+                    amount = Integer.parseInt(materialData[2]);
+                } catch (NumberFormatException ignored) {
+                }
+            }
+            boolean haveItem;
+            if (type.equalsIgnoreCase("vanilla")) {
+                haveItem = InventoryUtil.canTakeVanillaItems(player, type, id, amount);
+            } else {
+                haveItem = InventoryUtil.canTakeMMOItems(player, type, id, amount);
+            }
+            if (!haveItem) {
+                canCraft = false;
+                player.sendMessage("You don't have enough items in your inventory.");
+                player.sendMessage(type, id);
+            }
+        }
+        if (!canCraft) {
+            return;
+        }
+        for (String material : materials) {
+            String[] materialData = material.split(",");
+            if (materialData.length < 2) {
+                return;
+            }
+            String type = materialData[0];
+            String id = materialData[1];
+            int amount = 1;
+            if (materialData.length == 3) {
+                try {
+                    amount = Integer.parseInt(materialData[2]);
+                } catch (NumberFormatException ignored) {
+                }
+            }
+            if (type.equalsIgnoreCase("vanilla")) {
+                InventoryUtil.takeVanillaItems(player, id, amount);
+            } else {
+                InventoryUtil.takeMMOItems(player, type, id, amount);
+            }
+        }
+        Inventory inventory = getInventory();
+        List<String> reducedMaterials = new ArrayList<>();
+        for (int ingredientSlot : ingredientSlots) {
+            ItemStack ingredientItem = inventory.getItem(ingredientSlot);
+            if (ingredientItem == null) {
+                continue;
+            }
+            NBTItem nbtItem = NBTItem.get(ingredientItem);
+            String type = nbtItem.getType();
+            if (type == null) {
+                continue;
+            }
+
+            boolean allowedDuplicate = plugin.getConfig().getBoolean("allowed_duplicates", false);
+
+            String id = nbtItem.getString("MMOITEMS_ITEM_ID");
+            String arrayKey = String.join("_", type, id);
+
+            if (reducedMaterials.contains(arrayKey) && !allowedDuplicate) {
+                continue;
+            }
+            int currentAmount = ingredientItem.getAmount();
+            ingredientItem.setAmount(currentAmount - 1);
+            inventory.setItem(ingredientSlot, ingredientItem);
+
+            reducedMaterials.add(arrayKey);
+        }
+        MMOItem mmoItem = createMMOItem();
+        ItemStack resultItem = mmoItem.newBuilder().build();
+
+        int amount = config.getInt(key + ".amount", 1);
+        assert resultItem != null;
+        resultItem.setAmount(amount);
+        player.give(resultItem);
+
+        updateBonusStats();
     }
 }
