@@ -46,7 +46,9 @@ public class CraftingGUI extends Gui {
     protected HashMap<String, Double> bonusMMOStats = new HashMap<>();
 
     private final FileConfiguration config;
-    private final PaginationManager paginationManager = new PaginationManager(this);
+    private final PaginationManager recipeSlotManager = new PaginationManager(this);
+    private final PaginationManager materialSlotManager = new PaginationManager(this);
+
     private final AdvancedSlotManager advancedSlotManager = new AdvancedSlotManager(this);
     private String errorMessage = null;
     MMOItems mmoItems = MMOItems.plugin;
@@ -114,14 +116,14 @@ public class CraftingGUI extends Gui {
                     Icon icon = new Icon(recipeItem);
                     icon.onClick(clickEvent -> {
                         selectedRecipeKey = key;
-                        updateBonusStats();
+                        updateGuiData();
                     });
 
-                    this.paginationManager.addItem(icon);
+                    this.recipeSlotManager.addItem(icon);
                 }
             });
         }
-        paginationManager.update();
+        recipeSlotManager.update();
 
     }
 
@@ -177,7 +179,9 @@ public class CraftingGUI extends Gui {
             if (isAdvancedSlot(key)) {
                 buildAdvancedSlot(slot, key, item);
             } else if (isPreviewItemSlot(key)) {
-                appendPaginateSlot(slot);
+                appendRecipeSlot(slot);
+            } else if (getType(key) == IconType.PREVIEW_MATERIAL) {
+                appendMaterialSlot(slot);
             } else {
                 if (getType(key) == IconType.PREVIEW_RESULT) {
                     resultSlots.add(slot);
@@ -201,14 +205,14 @@ public class CraftingGUI extends Gui {
             }
             case NEXT -> {
                 icon.onClick(event -> {
-                    paginationManager.goNextPage();
-                    paginationManager.update();
+                    recipeSlotManager.goNextPage();
+                    recipeSlotManager.update();
                 });
             }
             case PREV -> {
                 icon.onClick(event -> {
-                    paginationManager.goPreviousPage();
-                    paginationManager.update();
+                    recipeSlotManager.goPreviousPage();
+                    recipeSlotManager.update();
                 });
             }
             case CRAFT -> {
@@ -236,19 +240,23 @@ public class CraftingGUI extends Gui {
             ingredientSlots.add(slot);
             advancedSlot.onPrePutClick((inventoryClickEvent, eventItem) -> !checkIngredient(eventItem));
             advancedSlot.onPut((inventoryClickEvent, eventItem) -> {
-                updateBonusStats();
+                updateGuiData();
             });
         }
     }
 
-    private void appendPaginateSlot(int slot) {
-        paginationManager.registerPageSlots(slot);
+    private void appendRecipeSlot(int slot) {
+        recipeSlotManager.registerPageSlots(slot);
+    }
+
+    private void appendMaterialSlot(int slot) {
+        materialSlotManager.registerPageSlots(slot);
     }
 
     private ItemStack buildItem(String key) {
         IconType type = getType(key);
 
-        if (type == IconType.PREVIEW_RESULT || type == IconType.PREVIEW_ITEM) {
+        if (type == IconType.PREVIEW_RESULT || type == IconType.PREVIEW_ITEM || type == IconType.PREVIEW_MATERIAL) {
             return new ItemStack(Material.AIR);
         }
 
@@ -413,7 +421,7 @@ public class CraftingGUI extends Gui {
         return mmoItem;
     }
 
-    private void updateBonusStats() {
+    private void updateGuiData() {
         if (selectedRecipeKey == null) {
             return;
         }
@@ -422,6 +430,34 @@ public class CraftingGUI extends Gui {
         ItemStack resultItem = createMMOItem().newBuilder().build();
         for (Integer slot : resultSlots) {
             inventory.setItem(slot, resultItem);
+        }
+
+
+        //build material list
+        List<String> materials = plugin.getConfig().getStringList("recipes." + selectedRecipeKey + ".materials");
+        for (String materialString : materials) {
+            HashMap<String, String> materialData = implodeRecipes(materialString);
+            if (materialData == null) continue;
+
+            String id = materialData.get("id");
+            String type = materialData.get("type");
+            int amount = Integer.parseInt(materialData.get("amount"));
+
+            ItemStack materialResultItem = null;
+            if (type.equalsIgnoreCase("vanilla")) {
+                Material material = Material.getMaterial(id);
+                if (material == null) continue;
+
+                materialResultItem = new ItemStack(material, amount);
+            } else {
+                MMOItem mmoItem = getMMOItems(type, id);
+                if (mmoItem == null) continue;
+                materialResultItem = mmoItem.newBuilder().build();
+                materialResultItem.setAmount(amount);
+            }
+
+            Icon icon = new Icon(materialResultItem);
+            materialSlotManager.addItem(icon);
         }
     }
 
@@ -462,7 +498,6 @@ public class CraftingGUI extends Gui {
         boolean canCraft = true;
         List<String> materials = config.getStringList(key + ".materials");
         for (String material : materials) {
-            plugin.getLogger().info(material);
             String[] materialData = material.split(",");
             if (materialData.length < 2) {
                 return;
@@ -478,7 +513,7 @@ public class CraftingGUI extends Gui {
             }
             boolean haveItem;
             if (type.equalsIgnoreCase("vanilla")) {
-                haveItem = InventoryUtil.canTakeVanillaItems(player, type, id, amount);
+                haveItem = InventoryUtil.canTakeVanillaItems(player, id, amount);
             } else {
                 haveItem = InventoryUtil.canTakeMMOItems(player, type, id, amount);
             }
@@ -492,19 +527,13 @@ public class CraftingGUI extends Gui {
             return;
         }
         for (String material : materials) {
-            String[] materialData = material.split(",");
-            if (materialData.length < 2) {
-                return;
-            }
-            String type = materialData[0];
-            String id = materialData[1];
-            int amount = 1;
-            if (materialData.length == 3) {
-                try {
-                    amount = Integer.parseInt(materialData[2]);
-                } catch (NumberFormatException ignored) {
-                }
-            }
+            HashMap<String, String> materialData = implodeRecipes(material);
+            if (materialData == null) return;
+
+            String id = materialData.get("id");
+            String type = materialData.get("type");
+            int amount = Integer.parseInt(materialData.get("amount"));
+
             if (type.equalsIgnoreCase("vanilla")) {
                 InventoryUtil.takeVanillaItems(player, id, amount);
             } else {
@@ -546,6 +575,28 @@ public class CraftingGUI extends Gui {
         resultItem.setAmount(amount);
         player.give(resultItem);
 
-        updateBonusStats();
+        updateGuiData();
+    }
+
+    private HashMap<String, String> implodeRecipes(String recipeString) {
+        String[] materialData = recipeString.split(",");
+        if (materialData.length < 2) {
+            return null;
+        }
+        String type = materialData[0];
+        String id = materialData[1];
+        int amount = 1;
+        if (materialData.length == 3) {
+            try {
+                amount = Integer.parseInt(materialData[2]);
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        HashMap<String, String> ingredients = new HashMap<>();
+        ingredients.put("id", id);
+        ingredients.put("type", type);
+        ingredients.put("amount", String.valueOf(amount));
+
+        return ingredients;
     }
 }

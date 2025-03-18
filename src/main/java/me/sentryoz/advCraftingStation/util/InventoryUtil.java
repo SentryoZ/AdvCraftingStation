@@ -82,7 +82,7 @@ public class InventoryUtil {
         }
     }
 
-    public static boolean canTakeVanillaItems(Player player, String type, String id, int amount) {
+    public static boolean canTakeVanillaItems(Player player, String id, int amount) {
         PlayerInventory inventory = player.getInventory();
         for (int slotIndex = 0; slotIndex < 36; slotIndex++) {
             ItemStack inventoryItem = inventory.getItem(slotIndex);

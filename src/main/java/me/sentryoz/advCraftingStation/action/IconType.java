@@ -8,7 +8,8 @@ public enum IconType {
     CRAFT,
     INGREDIENT,
     PREVIEW_ITEM,
-    PREVIEW_RESULT;
+    PREVIEW_RESULT,
+    PREVIEW_MATERIAL;
 
     public static IconType fromString(String actionString) {
         if (actionString != null) {

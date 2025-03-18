@@ -25,6 +25,7 @@ recipes:
       - MATERIAL,STEEL_INGOT,3
 
 # Config content of station
+
 contents:
   decorates:
     # Material (Default = STONE)
@@ -45,18 +46,21 @@ contents:
     customModelData: 1
     # Slots
     # Slot number can be one number (Ex: 1, 2) or range (Ex: 1-5, equal to 1,2,3,4,5)
-#    slots: 0-9,17-26
-#    slots: 1,2,3
+    #    slots: 0-9,17-26
+    #    slots: 1,2,3
     slots: 0
     # Type of the item
     # Should be there values
     # - NONE # do nothing, suitable for decorate item
     # - PREV # go to previous page
     # - NEXT # go to next page
+    # - PREV_MATERIAL # go to next page
+    # - NEXT_MATERIAL # go to next page
     # - CLOSE # close the container
     # - CRAFT # craft selected item
     # - INGREDIENT # slot for ingredient placeholder, will be replaced by ingredient put in
     # - PREVIEW_ITEM # show item in recipe list
+    # - PREVIEW_MATERIAL # show item in material list
     # - PREVIEW_RESULT # show result item after calculate the modify of ingredients
     # PREVIEW_ITEM and PREVIEW_RESULT don't use there config material, amount, name, customModelData.
     # And lore config will go to the bottom of current item lore
