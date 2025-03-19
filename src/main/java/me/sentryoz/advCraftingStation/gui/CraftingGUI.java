@@ -70,7 +70,6 @@ public class CraftingGUI extends Gui {
     }
 
     public boolean canOpen() {
-        FileConfiguration config = getConfig();
         if (config == null) {
             String message = station + " do not existed";
             TextComponent textComponent = Component.text(message);
@@ -198,28 +197,20 @@ public class CraftingGUI extends Gui {
 
         Icon icon = new Icon(item);
         switch (type) {
-            case CLOSE -> {
-                icon.onClick(event -> {
-                    player.closeInventory(InventoryCloseEvent.Reason.PLUGIN);
-                });
-            }
-            case NEXT -> {
-                icon.onClick(event -> {
-                    recipeSlotManager.goNextPage();
-                    recipeSlotManager.update();
-                });
-            }
-            case PREV -> {
-                icon.onClick(event -> {
-                    recipeSlotManager.goPreviousPage();
-                    recipeSlotManager.update();
-                });
-            }
-            case CRAFT -> {
-                icon.onClick(event -> {
-                    craftItem();
-                });
-            }
+            case CLOSE -> icon.onClick(event -> {
+                player.closeInventory(InventoryCloseEvent.Reason.PLUGIN);
+            });
+            case NEXT -> icon.onClick(event -> {
+                recipeSlotManager.goNextPage();
+                recipeSlotManager.update();
+            });
+            case PREV -> icon.onClick(event -> {
+                recipeSlotManager.goPreviousPage();
+                recipeSlotManager.update();
+            });
+            case CRAFT -> icon.onClick(event -> {
+                craftItem();
+            });
         }
 
         return icon;
@@ -239,9 +230,7 @@ public class CraftingGUI extends Gui {
         if (type == IconType.INGREDIENT) {
             ingredientSlots.add(slot);
             advancedSlot.onPrePutClick((inventoryClickEvent, eventItem) -> !checkIngredient(eventItem));
-            advancedSlot.onPut((inventoryClickEvent, eventItem) -> {
-                updateGuiData();
-            });
+            advancedSlot.onPut((inventoryClickEvent, eventItem) -> updateGuiData());
         }
     }
 

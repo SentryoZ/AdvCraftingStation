@@ -1,0 +1,102 @@
+# Default station config
+
+# Title of station (Optional)
+title: "Default station"
+
+# Number of rows (Default = 6, range 1-6)
+rows: 3
+
+#Permission for open station
+permission: station.canOpen.default
+
+# Recipe list
+recipes:
+  1:
+    # Type of result
+    type: SWORD
+    # ID of item
+    id: LONG_SWORD
+    # Amount will get (Default = 1, range 1-64)
+    amount: 1
+    # Materials, format: TYPE,ID,AMOUNT
+    # If you don't provide AMOUNT, it will be 1
+    materials:
+      - vanilla,stick,1
+      - MATERIAL,STEEL_INGOT,3
+
+# Config content of station
+contents:
+  decorates:
+    # Material (Default = STONE)
+    material: WHITE_STAINED_GLASS_PANE
+    # Amount will show (Default = 1, range 1-64)
+    amount: 1
+    # Name of item (Optional, default = vanilla item name)
+    name: "&f"
+    # Lore (Optional, default = null)
+    # Suggest use conditional placeholder plugin to make dynamic lore
+    # https://www.spigotmc.org/resources/82920/
+    lore:
+      - "This is default container"
+      - "Use this for learning"
+      - "Also support placeholder"
+      - "%some_placeholder%"
+    # Custom Model Data of item (Optional, default = null)
+    customModelData: 1
+    # Slots
+    # Slot number can be one number (Ex: 1, 2) or range (Ex: 1-5, equal to 1,2,3,4,5)
+#    slots: 0-9,17-26
+#    slots: 1,2,3
+    slots: 0
+    # Type of the item
+    # Should be there values
+    # - NONE # do nothing, suitable for decorate item
+    # - PREV # go to previous page
+    # - NEXT # go to next page
+    # - CLOSE # close the container
+    # - CRAFT # craft selected item
+    # - INGREDIENT # slot for ingredient placeholder, will be replaced by ingredient put in
+    # - PREVIEW_ITEM # show item in recipe list
+    # - PREVIEW_RESULT # show result item after calculate the modify of ingredients
+    # PREVIEW_ITEM and PREVIEW_RESULT don't use there config material, amount, name, customModelData.
+    # And lore config will go to the bottom of current item lore
+    type: NONE
+    # Permission for INGREDIENT type (Optional, default = null)
+    permission: default.slot.1
+  prev:
+    lore:
+      - ""
+      - "&fClick to go to previous page"
+    type: PREV
+    slots: 9
+  next:
+    lore:
+      - ""
+      - "&fClick to go to next page"
+    type: NEXT
+    slots: 17
+  recipeItem:
+    lore:
+      - ""
+      - "&fClick for select"
+    type: PREVIEW_ITEM
+    slots: 10-16
+  ingredients:
+    material: PAPER
+    name: "&fIngredient"
+    type: INGREDIENT
+    lore:
+      - ""
+      - "&fPut your ingredient here(Optional)"
+    slots: 18-22
+  resultItem:
+    type: PREVIEW_RESULT
+    slots: 25
+  craftAction:
+    material: MACE
+    name: "&fCraft Item"
+    type: CRAFT
+    lore:
+      - ""
+      - "&fClick for craft"
+    slots: 26
